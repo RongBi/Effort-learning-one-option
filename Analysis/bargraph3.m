@@ -2,7 +2,7 @@ function bargraph3(y,stdev,data)
 % plots a bar graph of y with grey color scheme and suitable x axes and
 % errorbars corresponding to std
 %
-% Miriam C Klein-Flügge
+% Miriam C Klein-FlÃ¼gge
 % August 2010
 
 % adapted by Rong Bi, Sep 2025
