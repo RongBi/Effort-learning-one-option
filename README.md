@@ -1,11 +1,22 @@
 # Effort-learning-one-option
 
-This repository contains analysis code for the manuscript:
-Environmental Uncertainty Shapes Human Effort Learning.
-Rong Bi, Jan Grohn, Patricia Lockwood, Miriam C. Klein-Flügge*, Lilian Weber*.
-PLOS Biology 2026. 
+This repository contains the analysis code for the manuscript:
 
-# Usage
-The folder `Analysis` contains the main script and functions to reproduce the figures and results in the manuscript.
-- [Effort_learning_OneOpt_analysis.m](Analysis/Effort_learning_OneOpt_analysis.m) loads the saved data and runs the analyses, saving figures and summarised data in the `Plots` folder.
-- The data are available on OSF: [OSF link]. To run the analyses, please download the data and save it in the `Data` folder.
+*Environmental Uncertainty Shapes Human Effort Learning*  
+Bi R., Grohn J., Lockwood P., Klein-Flügge M. C.*, Weber L.*  
+PLOS Biology (2026)
+
+---
+
+## Overview
+
+This repository includes code to reproduce the main analyses and figures reported in the manuscript.
+
+---
+
+## Usage
+
+- The data are available on OSF: [OSF link]. To run the analyses, download the data and place it in the `Data` folder.  
+- [Effort_learning_OneOpt_analysis.m](Analysis/Effort_learning_OneOpt_analysis.m) loads the saved data and runs the analyses, saving figures and summarised data in the `Plots` folder.  
+
+---
