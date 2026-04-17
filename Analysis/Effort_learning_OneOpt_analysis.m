@@ -1,19 +1,25 @@
-% This is the main script to analysize force trace for Effort_learning_oneOption study
+% This is the main script to analyse the force trace for the Effort_learning_oneOption study
 % Rong Bi, April 2026
 
 clear; clc;close all;
 
-% Path
-basepath = '/Users/rongbi/Documents/RongProjects/Effort_learning_oneOption/';
-analypath = [basepath,'Analysis/'];
-functions = [basepath,'Analysis/functions/'];
-behapath = [basepath,'Data/'];
-figurePath = [basepath,'Plots/'];
+% Relative path
+basepath = fileparts(mfilename('fullpath'));
+
+% Define subfolders
+analypath   = fullfile(basepath, 'Analysis');
+functionPath = fullfile(basepath, 'Analysis', 'functions');
+behapath    = fullfile(basepath, 'Data');
+figurePath  = fullfile(basepath, 'Plots');
+
+% Output file
 savepath = fullfile(figurePath, 'S1 Data.xlsx');
 
-cd(analypath);
+% Add paths
+addpath(genpath(analypath));
 addpath(behapath);
-addpath(functions);
+
+cd(analypath);
 
 % Subjects
 subjs = {'s02','s05','s06','s07','s09','s10','s11',...
