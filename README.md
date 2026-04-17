@@ -1,7 +1,7 @@
 # Effort-learning-one-option
 
 This repository contains analysis code for the manuscript:
-Environmental Uncertainty Shapes Human Effort Learning
+Environmental Uncertainty Shapes Human Effort Learning.
 Rong Bi, Jan Grohn, Patricia Lockwood, Miriam C. Klein-Flügge*, Lilian Weber*.
 PLOS Biology 2026. 
 
