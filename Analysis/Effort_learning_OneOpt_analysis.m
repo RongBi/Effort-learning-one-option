@@ -1,25 +1,27 @@
-% This is the main script to analyse the force trace for the Effort_learning_oneOption study
+% This is the main script to analysize force trace for Effort_learning_oneOption study
 % Rong Bi, April 2026
 
 clear; clc;close all;
 
-% Relative path
-basepath = fileparts(mfilename('fullpath'));
+%% relative path
 
-% Define subfolders
-analypath   = fullfile(basepath, 'Analysis');
-functionPath = fullfile(basepath, 'Analysis', 'functions');
-behapath    = fullfile(basepath, 'Data');
-figurePath  = fullfile(basepath, 'Plots');
+% Get path of this script (Analysis folder)
+analysisPath = pwd;  
 
-% Output file
-savepath = fullfile(figurePath, 'S1 Data.xlsx');
+% Go one level up → project root
+basePath = fileparts(analysisPath);
+
+% Define folders
+functionPath = fullfile(analysisPath, '/functions/');
+dataPath     = fullfile(basePath, '/Data/');
+figurePath   = fullfile(basePath, '/Plots/');
+
+% Output file - save summarised data
+savefile = fullfile(figurePath, 'S1 Data.xlsx');
 
 % Add paths
-addpath(genpath(analypath));
-addpath(behapath);
-
-cd(analypath);
+addpath(functionPath);
+addpath(dataPath);
 
 % Subjects
 subjs = {'s02','s05','s06','s07','s09','s10','s11',...
@@ -82,7 +84,8 @@ regressors_start = {'vol','noise','last effort','vol*noise','vol*last effort','n
 glmLables_start_fatigue = {'interc','vol','session1-2','session3-4','noiseDiff','trialInSession','last effort','vol*noiseDiff','vol*last effort','noiseDiff*last effort','vol*noiseDiff*last effort'};
 regressors_start_fatigue = {'vol','block34-12','block78-56','noiseDiff','trial','last effort','vol*noiseDiff','vol*last effort','noiseDiff*last effort','vol*noiseDiff*last effort'};
 
-glmLables_adjust = {'interc','vol','noise','jumpSign','absJumpSize','vol*noise'};
+glmLables_adjust = {'interc','vol','noise','jumpSign','absJumpSize','vol*noise'};clc
+
 regressors_adjust = {'vol','noise','jumpSign','absJumpSize','vol*noise'};
 
 condName = {'lowNoise_lowVol','lowNoise_highVol','highNoise_lowVol','highNoise_highVol'};
@@ -91,7 +94,7 @@ condName = {'lowNoise_lowVol','lowNoise_highVol','highNoise_lowVol','highNoise_h
 % load data and save as trials x samples x subjects matrix
 for s = 1:nSubj
 
-    [forceNorm,requEffort,requEffortNoN,volatility,noiseBL] = prepareForceTrace(behapath,subjs,s,subjStaF,subjVolF);
+    [forceNorm,requEffort,requEffortNoN,volatility,noiseBL] = prepareForceTrace(dataPath,subjs,s,subjStaF,subjVolF);
 
     forceTrace(:,:,s) = forceNorm;
     requEff(:,s) = requEffort;
@@ -697,11 +700,11 @@ exportgraphics(f3,output_graph,'Resolution',300);
 % ---- save data -------
 T_Fig3A = array2table(betaStartGlm(2:end,:)', 'VariableNames', regressors_start);
 T_Fig3A = addvars(T_Fig3A, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_Fig3A, savepath, 'Sheet', 'Fig3A');
+writetable(T_Fig3A, savefile, 'Sheet', 'Fig3A');
 
 T_Fig3B = array2table(startRT_M, 'VariableNames', condName);
 T_Fig3B = addvars(T_Fig3B, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_Fig3B, savepath, 'Sheet', 'Fig3B');
+writetable(T_Fig3B, savefile, 'Sheet', 'Fig3B');
 
 
 %% manuscipt Fig.4A - plot learning accuracy (prior - last effort) in high/low noise
@@ -885,7 +888,7 @@ multcompare(rm, 'FactorB');% volatility
 % ---- save data -------
 T_Fig4C = array2table(alpha_prior, 'VariableNames', condName);
 T_Fig4C = addvars(T_Fig4C, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_Fig4C, savepath, 'Sheet', 'Fig4C');
+writetable(T_Fig4C, savefile, 'Sheet', 'Fig4C');
 
 %% manuscript Fig.5 - adjustment RT
 % fig.5A - regression
@@ -943,11 +946,11 @@ multcompare(rm, 'FactorA', 'By', 'FactorB') % compare noise - A
 % ---- save data -------
 T_Fig5A = array2table(betaAdjustGlm(2:end,:)', 'VariableNames', regressors_adjust);
 T_Fig5A = addvars(T_Fig5A, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_Fig5A, savepath, 'Sheet', 'Fig5A');
+writetable(T_Fig5A, savefile, 'Sheet', 'Fig5A');
 
 T_Fig5B = array2table(adjustRT_M, 'VariableNames', condName);
 T_Fig5B = addvars(T_Fig5B, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_Fig5B, savepath, 'Sheet', 'Fig5B');
+writetable(T_Fig5B, savefile, 'Sheet', 'Fig5B');
 
 %% ------------------------------------------------------- Supplementary figures -------------------------------------------------
 %%---------------------------------------------------------------------------------------------------------------------------------
@@ -1269,7 +1272,7 @@ exportgraphics(fS3,output_graph,'Resolution',300);
 % ---- save data -------
 T_FigS3 = array2table(prior_bias_jumpBin, 'VariableNames', binLevels);
 T_FigS3 = addvars(T_FigS3, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS3, savepath, 'Sheet', 'FigS3');
+writetable(T_FigS3, savefile, 'Sheet', 'FigS3');
 
 
 %% supplementary Fig.S4 - check fatigue effect in start RT regression
@@ -1346,11 +1349,11 @@ multcompare(rm, 'FactorA');
 % ---- save data -------
 T_FigS4A = array2table(betaStartGlm_fatigue(2:end,:)', 'VariableNames', regressors_start_fatigue);
 T_FigS4A = addvars(T_FigS4A, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS4A, savepath, 'Sheet', 'FigS4A');
+writetable(T_FigS4A, savefile, 'Sheet', 'FigS4A');
 
 T_FigS4B = array2table(slope_startRT, 'VariableNames', {'Block 1+2','Block 3+4','Block 5+6','Block 7+8'});
 T_FigS4B = addvars(T_FigS4B, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS4B, savepath, 'Sheet', 'FigS4B');
+writetable(T_FigS4B, savefile, 'Sheet', 'FigS4B');
 
 %% supplementary Fig.S6AB - adjustment RT without changes
 % Fig.S6A - regression
@@ -1406,11 +1409,11 @@ multcompare(rm, 'FactorA', 'By', 'FactorB')
 % ---- save data -------
 T_FigS6A = array2table(betaAdjustGlm_noChags(2:end,:)', 'VariableNames', regressors_adjust);
 T_FigS6A = addvars(T_FigS6A, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS6A, savepath, 'Sheet', 'FigS6A');
+writetable(T_FigS6A, savefile, 'Sheet', 'FigS6A');
 
 T_FigS6B = array2table(adjustRT_NoChags_M, 'VariableNames', condName);
 T_FigS6B = addvars(T_FigS6B, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS6B, savepath, 'Sheet', 'FigS6B');
+writetable(T_FigS6B, savefile, 'Sheet', 'FigS6B');
 
 %% supplementary Fig.S6CD - adjustment RT in early/late stage
 adjustRT_afterChag_M = zeros(nSubj,6);
@@ -1487,7 +1490,7 @@ for m = 1:length(doChagsVersion)
     %----save data-----
     T_FigS6CD = array2table(adjustRT_afterChag_M, 'VariableNames', {'lowNoise_lowVolEarly','lowNoise_highVol','lowNoise_lowVolLate','highNoise_lowVolEarly','highNoise_highVol','highNoise_lowVolLate'});
     T_FigS6CD = addvars(T_FigS6CD, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-    writetable(T_FigS6CD, savepath, 'Sheet', sheetName{m});
+    writetable(T_FigS6CD, savefile, 'Sheet', sheetName{m});
 
 end
 
@@ -1593,7 +1596,7 @@ disp(stats.tstat);
 % ---- save data -------
 T_FigS5B = array2table(motorNoise_effBin, 'VariableNames', binLevels);
 T_FigS5B = addvars(T_FigS5B, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS5B, savepath, 'Sheet', 'FigS5B');
+writetable(T_FigS5B, savefile, 'Sheet', 'FigS5B');
 
 %% supplementary Fig.S5C - effects on absolute prior updating
 % model: prior updating(t) ~ motor noise(t-1) + required effort(t-1)
@@ -1648,7 +1651,7 @@ exportgraphics(fS5,output_graph,'Resolution',300);
 % ---- save data -------
 T_FigS5C = array2table(coefs, 'VariableNames', coefLabel);
 T_FigS5C = addvars(T_FigS5C, subjs(:), 'Before', 1, 'NewVariableNames', 'Subject');
-writetable(T_FigS5C, savepath, 'Sheet', 'FigS5C');
+writetable(T_FigS5C, savefile, 'Sheet', 'FigS5C');
 
 %% supplementary Fig.S5D - correlation of motor noise and learning rate
 % plot correlation
