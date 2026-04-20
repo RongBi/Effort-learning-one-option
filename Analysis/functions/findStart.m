@@ -1,5 +1,5 @@
 function [startIdx, nTrials_smallerThresh] = findStart(forceTrace, nanCutoffAll, badTrAll,threshStartFit)
-% This script is to define the start time
+% This script is to define the start onset
 % Rong Bi, 2026
 
 [nTrials,~,nSubj] = size(forceTrace);
@@ -8,6 +8,9 @@ startIdx = nan(nSubj,nTrials);
 nTrials_smallerThresh = zeros(nSubj,1);
 
 for s = 1:nSubj
+
+    disp(['Subject ',num2str(s)]);
+
     badTr = badTrAll{s,1};
     nanCutoff = nanCutoffAll(s);
     forceTraceSub = forceTrace(:,:,s);

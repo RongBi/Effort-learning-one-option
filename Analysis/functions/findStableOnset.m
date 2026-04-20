@@ -7,6 +7,8 @@ stableOnset_idx = nan(nSubj,nTrials);
 
 for s = 1:nSubj
 
+    disp(['Subject ',num2str(s)]);
+
     for tr = 1:nTrials
         trace_to_smooth = forceTrace(tr,:,s);
         d_trace = abs(smooth(diff(trace_to_smooth),smoothKernel));

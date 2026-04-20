@@ -7,6 +7,9 @@ prior_idx = nan(nSubj,nTrials);
 prior_force = nan(nSubj,nTrials);
 
 for s = 1:nSubj
+    
+    disp(['Subject ',num2str(s)]);
+
     for tr = 1:nTrials
         trace_to_smooth = forceTrace(tr,:,s);
         d_trace = diff(trace_to_smooth);

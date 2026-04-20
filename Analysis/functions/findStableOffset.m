@@ -7,6 +7,8 @@ function [stableOffset_idx] = findStableOffset(forceTrace,stableOnset_idx,smooth
 stableOffset_idx = nan(nSubj,nTrials);
 
 for s = 1:nSubj
+    disp(['Subject ',num2str(s)]);
+
     for tr = 1:nTrials
         trace_to_smooth = forceTrace(tr,:,s);
         d_trace = diff(smooth(trace_to_smooth,smoothKernel));
