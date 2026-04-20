@@ -29,7 +29,7 @@ This repository includes code to reproduce the main analyses and figures reporte
 
 ## Usage
 
-- The data are available on OSF: [OSF link]. To run the analyses, download the `RawData.zip` and place all files in the `Data` folder.  
+- The data are available on OSF: [https://doi.org/10.17605/osf.io/cf69x]. To run the analyses, download the `RawData.zip` and place all files in the `Data` folder.  
 - In the `Analysis` folder, [Effort_learning_OneOpt_analysis.m](Analysis/Effort_learning_OneOpt_analysis.m) loads the saved data and runs the analyses, saving figures and summarised data in the `Plots` folder.
 - `Functions` in the `Analysis` folder contains functions to run the analysis.
 
