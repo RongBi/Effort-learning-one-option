@@ -14,6 +14,8 @@ This repository includes code to reproduce the main analyses and figures reporte
 
 ---
 
+## Project Structure
+
 ## Usage
 
 - The data are available on OSF: [OSF link]. To run the analyses, download the `RawData.zip` and place all files in the `Data` folder.  
