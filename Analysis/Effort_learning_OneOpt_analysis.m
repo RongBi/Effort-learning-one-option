@@ -1,4 +1,7 @@
-% This is the main script to analysize force trace for Effort_learning_oneOption study
+% This is the main script to analyse the force trace data for the Plos Biology paper by Bi et al. (2026)
+% It takes about 40 minutes to run and produces all plots and statistical results reported in the paper
+% All figures and summarised data will be saved into the 'Plots' folder
+
 % Rong Bi, April 2026
 
 clear; clc;close all;
@@ -13,7 +16,7 @@ basePath = fileparts(analysisPath);
 
 % Define folders
 functionPath = fullfile(analysisPath, '/functions/');
-dataPath     = fullfile(basePath, '/Data/');
+dataPath     = fullfile(basePath, '/Data/'); % download raw data from OSF and place it in this folder
 figurePath   = fullfile(basePath, '/Plots/');
 
 % Output file - save summarised data
@@ -91,7 +94,7 @@ regressors_adjust = {'vol','noise','jumpSign','absJumpSize','vol*noise'};
 condName = {'lowNoise_lowVol','lowNoise_highVol','highNoise_lowVol','highNoise_highVol'};
 
 %% Force trace preprocessing
-% load data and save as trials x samples x subjects matrix
+% load data and save as a matrix: trials x samples x subjects
 for s = 1:nSubj
 
     [forceNorm,requEffort,requEffortNoN,volatility,noiseBL] = prepareForceTrace(dataPath,subjs,s,subjStaF,subjVolF);
@@ -104,8 +107,9 @@ for s = 1:nSubj
 
 end
 
-% delete trials had less than 1300 samples, due to recording issues or brief squeezes
-[nanCutoffAll,badSubAll,badTrAll] = findBadTrials(forceTrace,subjs);
+% delete trials that had less than 1300 samples, due to recording issues or brief squeezes
+nSamplesThresh = 1300;
+[nanCutoffAll, badSubAll, badTrAll] = findBadForceTraceTrials(forceTrace, subjs, nSamplesThresh);
 
 % detect trials where force began from non-zero values due to accidental squeezing before the thermometer onset 
 % set the baseline values as zero to aid data processing
@@ -125,17 +129,19 @@ for s = 1:nSubj
 
     forceTrace(:,:,s) = forceTraceSub;
 
-    highInitForce_idx(s,1) = idx; % only affect 5 trials across all subjects
+    highInitForce_idx(s,1) = idx; % only affects 5 trials across all subjects
 
 end
 
 
 %% ========================= Define Force initiation (Start RT) ===========================
-% define 'Start' idx
+% define start onset
 threshStartFit = 0.01;
+
+disp('Now computing the start onset...');
 [startIdx, nTrials_smallerThresh] = findStart(forceTrace, nanCutoffAll, badTrAll,threshStartFit);
 
-% plot to check start RT -> fix start by hand
+% fix start onset manually
 [startIdx] = fixStartByHand(startIdx);
 
 % delete outlier trials where the start RT was more than 'mean ± three SD" 
@@ -154,9 +160,10 @@ end
 
 for s = 1:nSubj
  sumTrials = sum(length(find(~isnan(startIdx(s,:)))));
- % disp([subjs{s} ': ' num2str(sumTrials./S.nTotalTrials)]); % over 97% trials left
+ % disp([subjs{s} ': ' num2str(sumTrials./S.nTotalTrials)]); 
 end
-disp('Preprocessing done!')
+
+disp('Start onset defined!')
 
 %% ========================= Define prior in the first plateau ===========================
 % find prior idx and prior force
@@ -164,9 +171,11 @@ smoothKernel = 40;
 zeroPriorThres = 0.001;
 forceWindow = 10; % first plateau
 threshPlateauForce = 0.15;
+
+disp('Now computing the prior...');
 [prior_idx,prior_force] = findPrior(forceTrace,startIdx,smoothKernel,zeroPriorThres,forceWindow,threshPlateauForce);
 
-% fix prior idx by hand
+% fix prior index manually
 [prior_idx] = fixPriorByHand(prior_idx);
 
 % prior duration: how quickly people arrive at the first plateau
@@ -186,7 +195,7 @@ for s = 1:nSubj
     end
 end
 
-% update prior duration
+% prior duration
 priordura_idx = prior_idx - startIdx;
 
 % check number of trials where prior was defined
@@ -208,19 +217,18 @@ sampleWindow = 300;
 threshStableForce = 0.1;
 
 % define stable onset 
+disp('Now computing the stable onset...');
 [stableOnset_idx] = findStableOnset(forceTrace,prior_idx,smoothKernel,zeroSumDerivaDiffThres,sampleWindow,sumDerivaThres,threshStableForce);
 
-% fix stable onset by hand
+% fix stable onset manually
 [stableOnset_idx] = fixStableOnsetByHand(stableOnset_idx);
 
-
 % compute winth-trial adjustment starts from the prior to stable onset
-adjustment_samp = stableOnset_idx - prior_idx;% sample points as unit
+adjustment_samp = stableOnset_idx - prior_idx;% sample points as units
 
 disp('Stable onset defined!')
 
 %% percentage of trials in which the prior and stable period could be detected for each subject
-% could use this information to exclude the bad subjects
 nPlateauTrials = zeros(nSubj,1);
 nStableTrials = zeros(nSubj,1);
 
@@ -230,7 +238,7 @@ for s = 1:nSubj
 end
 
 plateauTrials_rate = (nPlateauTrials./S.nTotalTrials).*100;
-stableTrials_rate = (nStableTrials./S.nTotalTrials).*100; % use % as uni
+stableTrials_rate = (nStableTrials./S.nTotalTrials).*100; 
 
 %% for measures related to effort learning, convert samples to time (ms)
 % start RT
@@ -244,6 +252,7 @@ adjustRT_log = log(adjustRT);
 % prior RT 
 priorRT = priordura_idx.*(1000/S.samplRate);
 priorRT_mean = nan(nSubj,1);
+
 % mean of prior duration
 for s = 1:nSubj
     trPriorRT = intersect(idxAllTrialsNofirst,find(~isnan(priorRT(s,:))));
@@ -258,14 +267,14 @@ disp(std(priorRT_mean));
 
 
 %% Get the change trials
-% define idx for break
+% the first trial after break was not real change
 blockBreak = (S.nTrials/2+1):S.nTrials/2:S.nTotalTrials;
 trChanges = zeros(nSubj,S.nChanges);
 trChanges_t1 = zeros(nSubj,S.nChanges);
 
 % find trial idx for change trial and following trials
 for s = 1:nSubj
-    % find change trials t
+
         idxChanges = find(diff(requEffNoN(:,s))~=0) + 1;
         unvalidTr = intersect(idxChanges,blockBreak); % sometimes there is no change before and after break
         idxChanges(ismember(idxChanges, unvalidTr)) = [];
@@ -277,7 +286,7 @@ for s = 1:nSubj
 end
 
 
-%% prep for manuscript Fig.3 & Fig.5 - fit glm (linear regression) for start RT and with-trial adjustment RT
+%% preparation for manuscript Fig.3 & Fig.5 - fit glm (linear regression) for start RT and with-trial adjustment RT
 diffBlockGroup12 = [-ones(S.nTrials,1);  ones(S.nTrials,1); zeros(S.nTrials*2,1)];
 diffBlockGroup34 = [zeros(S.nTrials*2,1); -ones(S.nTrials,1); ones(S.nTrials,1)];
 noiseBlockDiff = [-ones(S.nTrials,1);  -ones(S.nTrials,1); ones(S.nTrials,1); ones(S.nTrials,1)];
@@ -308,14 +317,14 @@ for s  = 1:nSubj
     trNochanges = setdiff(idxAllTrials,trFromChanges);
 
 %--------------------------------start RT------------------------------------
-% start RT for all trials (prep Fig.3A)
+% start RT for all trials (preparation Fig.3A)
 trialsStart = intersect(find(~isnan(startRT_log(s,:))), idxAllTrialsNofirst); % all nan start would be nan plateau
 designStartTime = zscore([zscore(vol(trialsStart,s)) zscore(noise(trialsStart,s)) zscore(requEff_t1(trialsStart,s)) ...
                    zscore(vol(trialsStart,s)).*zscore(noise(trialsStart,s)) zscore(vol(trialsStart,s)).*zscore(requEff_t1(trialsStart,s)) zscore(noise(trialsStart,s)).*zscore(requEff_t1(trialsStart,s)) ...
                    zscore(vol(trialsStart,s)).*zscore(noise(trialsStart,s)).*zscore(requEff_t1(trialsStart,s))]);
 betaStartGlm(:,s) = glmfit(designStartTime,startRT_log(s,trialsStart),'normal');
 
-%--------------------------------start RT: add fatigue regressor into regression (prep Fig.S4A-B)-------------------
+%--------------------------------start RT: add fatigue regressor into regression (preparation Fig.S4A-B)-------------------
 designStartGlm_fatigue = zscore([zscore(vol(trialsStart,s)) diffBlockGroup12(trialsStart) diffBlockGroup34(trialsStart) noiseBlockDiff(trialsStart) zscore(trialNumber(trialsStart)) zscore(requEff_t1(trialsStart,s)) ...
                    zscore(vol(trialsStart,s)).*zscore(noiseBlockDiff(trialsStart)) zscore(vol(trialsStart,s)).*zscore(requEff_t1(trialsStart,s)) zscore(noiseBlockDiff(trialsStart)).*zscore(requEff_t1(trialsStart,s)) ...
                    zscore(vol(trialsStart,s)).*zscore(noiseBlockDiff(trialsStart)).*zscore(requEff_t1(trialsStart,s))]);
@@ -323,14 +332,14 @@ betaStartGlm_fatigue(:,s) = glmfit(designStartGlm_fatigue,startRT_log(s,trialsSt
 
 
 %-------------------------------adjustment RT-----------------------------------
-% adjustment RT for all trials (prep Fig.5A)
+% adjustment RT for all trials (preparation Fig.5A)
 idxAdjust = intersect(find(~isnan(adjustRT_log(s,:))), find(~isnan(jumpSign(:,s)))');
 trialsAdjust = intersect(idxAdjust, idxAllTrialsNofirst);
 designAdjust = zscore([zscore(vol(trialsAdjust,s)) zscore(noise(trialsAdjust,s)) zscore(jumpSign(trialsAdjust,s)) zscore(jumpSizeAbs(trialsAdjust,s))...
                    zscore(vol(trialsAdjust,s)).*zscore(noise(trialsAdjust,s))]);
 betaAdjustGlm(:,s) = glmfit(designAdjust,adjustRT_log(s,trialsAdjust),'normal');
 
-% adjustment RT without changes (prep Fig.S6A)
+% adjustment RT without changes (preparation Fig.S6A)
 trialsAdjust_noChags = intersect(trNochanges,trialsAdjust);
 designAdjust_noChags = zscore([zscore(vol(trialsAdjust_noChags,s)) zscore(noise(trialsAdjust_noChags,s)) zscore(jumpSign(trialsAdjust_noChags,s)) zscore(jumpSizeAbs(trialsAdjust_noChags,s))...
                    zscore(vol(trialsAdjust_noChags,s)).*zscore(noise(trialsAdjust_noChags,s))]);
@@ -338,7 +347,7 @@ betaAdjustGlm_noChags(:,s) = glmfit(designAdjust_noChags,adjustRT_log(s,trialsAd
 
 end
 
-%% prep: mean start RT, mean prior duration, mean adjustment RT acorss conditions -> to visualize the interaction in regression
+%% preparation: mean start RT, mean adjustment RT acorss conditions -> for visualising the interactions in regression
 % mean of start RT and adjustment RT in low/high volatility across low/high noise environments
 for s = 1:nSubj
     c = 0;
@@ -367,7 +376,8 @@ end
 
 
 %% manuscript Fig.2A-C, force trace show evidence of learned effort
-% manuscript Fig.2A - find start point
+
+% manuscript Fig.2A - find start onset
 s = 26; % example participant
 fsize = [0.1 0.1 0.2 0.26];
 f2 = figure('color','w');hold on;
@@ -476,10 +486,11 @@ output_graph = fullfile(figurePath, [picName, '.tif']);
 exportgraphics(f2,output_graph,'Resolution',300);
 
 
-%% manuscript Fig.2D - histogram of Success rate for each participant
+%% manuscript Fig.2D - histogram of success rate for each participant
 success_time = nan(nSubj,S.nTotalTrials);
 success_rate = nan(nSubj,S.nTotalTrials);
-% define successful trial which force stays above required effort > 1000 ms
+
+% define successful trial which force stays above required effort more than 1000 ms
 for s = 1:nSubj
     for tr = 1:S.nTotalTrials
         trace_to_analy = forceTrace(tr,:,s);
@@ -496,7 +507,7 @@ end
 
 success_rate_mean = mean(success_rate,2).*100;
 
-% plot histogram for success rate (for manuscript)
+% plot histogram for success rate
 fsize = [0.1 0.1 .20 .26];
 f2 = figure('color','w');
 histogram(success_rate_mean, 'BinWidth', 2,'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.4, 'EdgeColor', 'none');
@@ -514,7 +525,7 @@ picName = 'fig2D';
 output_graph = fullfile(figurePath, [picName, '.tif']);
 exportgraphics(f2,output_graph,'Resolution',300);
 
-%% prep manuscript Fig.2E & 2F & 4A - prior accuracy in all trials, in low/high noise, in change down/up trials
+%% preparation manuscript Fig.2E & 2F & 4A - prior accuracy in all trials, in low/high noise, in change down/up trials
 prior_changes = cell(nSubj,2);
 jumpSize_changes = cell(nSubj,2);
 prior_accu_allTrial = nan(nSubj,length(idxAllTrialsNofirst));
@@ -606,7 +617,7 @@ disp(p);
 disp(stats.tstat);
 
 
-%% manuscript Fig.2E - histogram of learning accuracy (prior - last effort) across all trials
+%% manuscript Fig.2E - histogram of learning accuracy (prior - required effort) across all trials
 fsize = [0.1 0.1 0.2 0.26];
 f2 = figure('color','w');
 histogram(prior_accuracy, 'BinWidth', 0.05,'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.4, 'EdgeColor', 'none');hold on;
@@ -643,10 +654,9 @@ picName = 'fig2F1';
 output_graph = fullfile(figurePath, [picName, '.tif']);
 exportgraphics(f2,output_graph,'Resolution',300);
 
-% bar plot of mean (prior-required effort) in change up and change down
+% bar plot: mean of (prior-required effort) in change up and change down
 mean_priorBias = [mean_prior_up mean_prior_down];
 f2 = figure('color','w');hold on;
-% fsize = [0.1 0.1 0.15 0.25]; 
 fsize = [0.1 0.1 0.08 0.15];
 set(gcf,'units','normalized','position',fsize);
 set(gca, 'XTick',1:2,'XTickLabels',{'Up','Down'},'LineWidth', 1.2,'fontsize',16,'XColor','k','YColor','k'); 
@@ -735,7 +745,7 @@ mean_priorACC = [mean_priorAcc_LN mean_priorAcc_HN sd_priorAcc_LN sd_priorAcc_HN
 data_mean_priorACC(:,1,:) = [mean_priorACC(:,[1,3])];% there are a 3D matrix for individual data plot: data(:,1,ib); data(:,2,ib)
 data_mean_priorACC(:,2,:) = [mean_priorACC(:,[2,4])];
 
-colsbar = {[0, 0.4470, 0.7410], [0.4940, 0.1840, 0.5560], [0, 0.4470, 0.7410]+0.15,[0.4940, 0.1840, 0.5560]+0.15};%Deep blue,Muted purple
+colsbar = {[0, 0.4470, 0.7410], [0.4940, 0.1840, 0.5560], [0, 0.4470, 0.7410]+0.15,[0.4940, 0.1840, 0.5560]+0.15}; % Deep blue,Muted purple
 fS2 = figure('color','w');hold on;
 fsize = [0.1 0.1 0.1 0.15]; set(gcf,'units','normalized','position',fsize);
 set(gca, 'XTick',1:2,'XTickLabels',{'Mean','Variance'},'LineWidth', 1.2,'fontsize',16,'XColor','k','YColor','k'); 
@@ -829,7 +839,7 @@ disp('p & t vale of t-3,t-2,t-1:');
 disp(pAll);
 disp(statsAll);
 
-%% manuscipt Fig.4C - learning rate coeffi (without change trials)
+%% manuscipt Fig.4C - learning rate coefficient (without change trials)
 pe_prior = nan(S.nTotalTrials,nSubj);
 update_prior = nan(S.nTotalTrials,nSubj);
 alpha_prior = nan(nSubj,S.nBlockGroup);
@@ -847,7 +857,7 @@ for s = 1:nSubj
             idxForce_con = intersect(idxAllTrialsNofirst, idxAllTrials(noise(:,s) == i & vol(:,s) == j));
             trForce = intersect(idxForce_con, find(~isnan(update_prior(:,s))));
 
-            % exclude change trial t and following trial t+1 (otherwise the learning rate would be larger than 1)
+            % exclude change trial t and following trial t+1
             idxChanges_t_t1 = sort([trChanges(s,:) trChanges_t1(s,:)]);
             trForce_noChages = intersect(setdiff(idxAllTrials,idxChanges_t_t1),trForce);
 
@@ -1494,20 +1504,22 @@ for m = 1:length(doChagsVersion)
 
 end
 
-close all;
 
-%% supplementary Fig.S5 - motor noise
+%% ----------------------------------------------- supplementary Fig.S5 - motor noise section ------------------------------------------
 
 % ========================= define the offset of stable period ===========================
-% find ending point of stable perior for trials going back to zero
+% find stable offset
 zeroStableThres = -0.0001;
 smoothKernel = 40;
 threshStableForce = 0.1;
 
+disp('Now computing the stable offset...');
 stableOffset_idx = findStableOffset(forceTrace,stableOnset_idx,smoothKernel,zeroStableThres,threshStableForce);
 
-% check each force trace and fix by hand
+% fix stable offset manually
 [stableOffset_idx] = fixStableOffsetByHand(stableOffset_idx);
+
+disp('Stable offset defined!');
 
 %% supplementary Fig.S5A - example force trace of offset in stable period
 s = 26;
@@ -1553,7 +1565,7 @@ for s = 1:nSubj
 end
 
 % plot motor noise by effort levels
-effLevels = [0.2 0.3 0.4 0.5]; % use requEff without noise for each effort bin
+effLevels = [0.2 0.3 0.4 0.5]; % for each effort level, use requEff without noise
 binLevels = {'0.2','0.3','0.4','0.5'};
 motorNoise_effBin = nan(nSubj,numel(effLevels));
 
@@ -1674,7 +1686,6 @@ picName = 'figS5D';
 output_graph = fullfile(figurePath, [picName, '.tif']);
 exportgraphics(fS5,output_graph,'Resolution',300);
 
-close all;
 
 
 % END OF SCRIPT
